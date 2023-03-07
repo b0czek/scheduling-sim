@@ -1,0 +1,16 @@
+.timeline-track {
+    overflow: scroll;
+    height: 100px;
+    display: flex;
+    flex-direction: row;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+.timeline-block {
+    padding-right: 10px;
+    
+}
+.timeline-block-content {
+    background-color: aquamarine;
+
+}

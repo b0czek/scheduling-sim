@@ -23,7 +23,6 @@ describe("FCFS", () => {
          let waitingTimes = [0,1,6,9,15];
          expect(waitingTimes.every((t, idx) => {
             let waitingTime = scheduler.getWaitingTime(idx);
-            console.log(waitingTime);
             return waitingTime === t;
          }
          )).toBeTruthy();

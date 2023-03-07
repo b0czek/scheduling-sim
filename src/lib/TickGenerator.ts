@@ -1,27 +1,31 @@
 import { start } from "repl";
 
-const TICK_TIME_MS = 50;
+const TICK_TIME_MS = 250;
 
-export const TickGenerator = () => {
+export class TickGenerator {
     
-    return {
-        tickListeners: [] as Array<() => void>,
-        shouldContinue: false,
-        time: 0,
-        addTickListener(listener: () => void) {
+        private  tickListeners: Array<() => void> = [];
+        private shouldContinue:boolean = false;
+        public time: number = 0;
+        public addTickListener = (listener: () => void) => {
+
             this.tickListeners.push(listener);
-        },
-        removeTickListener(listener: () => void) {
+        }
+
+        public removeTickListener = (listener: () => void) => {
             this.tickListeners = this.tickListeners.filter(l => l !== listener);
-        },
-        start() {
+        }
+        public start = () => {
             this.shouldContinue = true;
             setTimeout(this.timeoutCallback, TICK_TIME_MS);
-        },
-        stop() {
+        }
+        
+        public stop = () => {
+        
             this.shouldContinue = false;
-        },
-        timeoutCallback() {
+        }
+        public timeoutCallback = () => {
+        
             this.time++;
             this.tickListeners.forEach(listener => listener());
             if(this.shouldContinue) {
@@ -29,6 +33,5 @@ export const TickGenerator = () => {
                 setTimeout(this.timeoutCallback, TICK_TIME_MS);
             }
 
-        }
     }
 };

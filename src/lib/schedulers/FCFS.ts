@@ -1,6 +1,7 @@
 import { Process } from "../Process";
 import { ProcessShard } from "../ProcessShard";
 import { Scheduler } from "../Scheduler";
+import { findShardIdxInQueue } from "./utils";
 
 export class FCFS implements Scheduler  {
     private initialProcesses: Process[] = [];
@@ -9,7 +10,7 @@ export class FCFS implements Scheduler  {
     private getTime: () => number = () => 0;
 
     private createShard = (process: Process): ProcessShard => { return {
-        process: process,
+        process,
         shard_time: process.execution_time,
         completing: true,
         execution_start_time: this.getTotalExecutionTime(),
@@ -20,19 +21,19 @@ export class FCFS implements Scheduler  {
         this.processes.forEach(process => this.queue.push(this.createShard(process)));
     }
 
-    setInitialProcesses = (processes: Process[]) => {
+    public setInitialProcesses = (processes: Process[]) => {
         this.processes = processes;
         this.initialProcesses = processes;
         this.refreshQueue();
 
     }
 
-    addProcess = (process: Process) => {
+    public addProcess = (process: Process) => {
         this.processes.push(process);
         this.queue.push(this.createShard(process));
     }
 
-    getTotalExecutionTime = (): number => {
+    public getTotalExecutionTime = (): number => {
         if(this.queue.length === 0) {
             return 0;
         }
@@ -40,36 +41,8 @@ export class FCFS implements Scheduler  {
         return lastProcess.execution_start_time + lastProcess.shard_time;
     }
 
-    getShardExecutingAtTime = (time: number): number => {
-        if(this.queue.length === 0) {
-            return -1;
-        } 
-        let lastShard = this.queue.at(-1)!;
-        if(time > lastShard.execution_start_time + lastShard.shard_time) {
-            return -1;
-        }
-
-        // binary search
-        let l = 0;
-        let r = this.queue.length - 1;
-        while(l <= r) {
-            let m = (l + r) >> 1;
-            let s = this.queue[m];
-            if(s.execution_start_time > time) {
-                r = m - 1;
-            }
-            else if(s.execution_start_time + s.shard_time <= time) {
-                l = m + 1;
-            }
-            else {
-                return m;
-            }
-        }
-        return -1;
-    }
-
-    getCurrentProcessShard = (): ProcessShard | null => {
-        let currentProcessIdx = this.getShardExecutingAtTime(this.getTime());
+    public getCurrentProcessShard = (): ProcessShard | null => {
+        let currentProcessIdx = findShardIdxInQueue(this.queue, this.getTime());
         if(currentProcessIdx === -1) {
             return null;
         }
@@ -77,8 +50,8 @@ export class FCFS implements Scheduler  {
     };
 
 
-    getQueueSinceNow = (): ProcessShard[] => {
-        let currentProcessIdx = this.getShardExecutingAtTime(this.getTime());
+    public getQueueSinceNow = (): ProcessShard[] => {
+        let currentProcessIdx = findShardIdxInQueue(this.queue, this.getTime());
         if(currentProcessIdx === -1) {
             return [];
         }
@@ -87,13 +60,13 @@ export class FCFS implements Scheduler  {
     };
 
 
-    getProcessShards = () => this.queue;
+    public getProcessShards = () => this.queue;
 
-    setTimeSource = (source: () => number) => this.getTime = source;
+    public setTimeSource = (source: () => number) => this.getTime = source;
 
-    reset = () => this.setInitialProcesses(this.initialProcesses);
+    public reset = () => this.setInitialProcesses(this.initialProcesses);
 
-    getAverageWaitingTime = () => {
+    public getAverageWaitingTime = () => {
         let queueNow = this.getQueueSinceNow();
         if(queueNow.length === 0) {
             return 0;
@@ -108,24 +81,22 @@ export class FCFS implements Scheduler  {
                 waitingTime
             }
         })
-        .map(s => s.waitingTime)
-        .reduce((acc, val) => acc + val, 0);
+        .reduce((acc, val) => acc + val.waitingTime, 0);
         return totalWaitTime / queueNow.length;
     }
 
-    getWaitingTime = (pid: number): number => {
+    public getWaitingTime = (pid: number): number => {
         let queueNow = this.getQueueSinceNow();
 
         if(queueNow.length === 0) {
             return 0;
         }
-        let processIdx = queueNow.findIndex(shard => shard.process.pid === pid);
-        if(processIdx === -1) {
+        let shardIdx = queueNow.findIndex(shard => shard.process.pid === pid);
+        if(shardIdx === -1) {
             return 0;
         }
-        let process = queueNow[processIdx].process;
-        let completionTime = queueNow.slice(0, processIdx + 1).reduce((acc, val) => acc + val.shard_time, 0);
-        return completionTime - process.arrival_time - process.execution_time;
+        let shard = queueNow[shardIdx];
+        return shard.execution_start_time - shard.process.arrival_time;
     };
 
 };
