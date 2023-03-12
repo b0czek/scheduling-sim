@@ -22,8 +22,8 @@ export class FCFS implements Scheduler {
   };
 
   public setInitialProcesses = (processes: Process[]) => {
-    this.processes = processes;
-    this.initialProcesses = processes;
+    this.processes = [...processes];
+    this.initialProcesses = [...processes];
     this.refreshQueue();
   };
 

@@ -4,7 +4,7 @@ let pid = 0;
 let totalExecutionTime = 0;
 
 export const generateProcess = (now: number, length?: number): Process => {
-    let execution_time = length ?? Math.floor(Math.random() * 15 + 1);
+    let execution_time = Math.max(length ?? Math.floor(Math.random() * 15 + 1), 1);
     totalExecutionTime += execution_time;
     return {
         arrival_time: now,

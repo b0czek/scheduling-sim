@@ -46,8 +46,8 @@ export class SJF implements Scheduler {
     };
 
     public setInitialProcesses = (processes: Process[]) => {
-        this.initialProcesses = processes;
-        this.processes = processes;
+        this.initialProcesses = [...processes];
+        this.processes = [...processes];
         this.queue = processes.sort((a, b) => a.execution_time - b.execution_time).map((p) => this.createFullShard(p));
         this.refreshShards(0);
     };
@@ -55,7 +55,6 @@ export class SJF implements Scheduler {
     private insertShard = (shard: ProcessShard, currentProcessShardIdx: number) => {
         let l = currentProcessShardIdx;
         let r = this.queue.length - 1;
-        console.log("inserting shard", l, r);
         while (l <= r) {
             let m = (l + r) >> 1;
             let s = this.queue[m];
@@ -73,14 +72,12 @@ export class SJF implements Scheduler {
             }
         }
         this.queue.splice(l, 0, shard);
-        console.log(l);
         this.refreshShards(l);
     };
 
     public addProcess = (process: Process) => {
         let now = this.getTime();
         let currentProcessShardIdx = findShardIdxInQueue(this.queue, now);
-        console.log("CURRENT TIME: ", now, "CURRENT PROCESS SHARD IDX: ", currentProcessShardIdx);
 
         if (currentProcessShardIdx === -1) {
             console.log("no current process found " + now);
@@ -106,10 +103,14 @@ export class SJF implements Scheduler {
                     process: shard.process,
                     shard_time: remainingTime,
                 };
-                console.log(shard, secondShard);
                 this.queue.splice(currentProcessShardIdx + 1, 0, secondShard);
+
+            }
+            if(now === shard.execution_start_time) {
+                currentProcessShardIdx--;
             }
         }
+        currentProcessShardIdx++;
 
         this.insertShard(this.createFullShard(process), currentProcessShardIdx);
     };

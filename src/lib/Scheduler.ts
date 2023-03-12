@@ -13,9 +13,10 @@ export interface Scheduler {
     setTimeSource: (source: () => number) => void;
 
     reset: () => void;
-
+    
     getAverageWaitingTime: () => number; 
-
+    
     getWaitingTime: (pid: number) => number;
-
+    
+    setTimeQuantum?: (timeQuantum: number) => void;
 }
