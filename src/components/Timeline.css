@@ -1,16 +1,25 @@
-.timeline-track {
+.timelines {
+    padding-left: 20px;
     overflow: scroll;
+}
+
+.timeline-track {
     height: 100px;
     display: flex;
     flex-direction: row;
     flex-grow: 0;
     flex-shrink: 0;
+    align-items: center;
 }
+
+.timeline-block-content-completing {
+    border-right: 2px solid red;
+}
+
 .timeline-block {
     padding-right: 10px;
-    
 }
 .timeline-block-content {
-    background-color: aquamarine;
-
+    height: 50px;
+    background-color: rgb(31, 212, 113);
 }
