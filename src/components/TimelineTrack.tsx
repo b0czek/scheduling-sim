@@ -1,14 +1,24 @@
 import React from "react";
 import { ProcessShard } from "../lib/ProcessShard";
 import { Scheduler } from "../lib/Scheduler";
+import ColorHash from "color-hash";
 import "./Timeline.css";
+
+const colorHash = new ColorHash();
+
+const hashPid = (pid: number) => {
+    return colorHash.hex(`${pid}+`);
+};
 
 const TimelineBlock = ({ shard }: { shard: ProcessShard }) => {
     const w = shard.shard_time * 50 - 10;
     return (
-        <div className={`timeline-block`} style={{ width: w, minWidth: w }}>
-            <div className={`timeline-block-content ${shard.completing ? "timeline-block-content-completing" : ""}`}>
-                {shard.process.pid}
+        <div className={`timeline-block`} style={{ width: w, minWidth: w }} onMouseOver={() => console.log(shard)}>
+            <div
+                style={{ backgroundColor: hashPid(shard.process.pid) }}
+                className={`timeline-block-content ${shard.completing ? "timeline-block-content-completing" : ""}`}
+            >
+                <span>{shard.process.pid}</span>
             </div>
         </div>
     );

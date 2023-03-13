@@ -1,12 +1,11 @@
 import { Process } from "../Process";
-import { ProcessShard } from "../ProcessShard";
+import { ProcessShard, ProcessShardQueue } from "../ProcessShard";
 import { Scheduler } from "../Scheduler";
-import { findShardIdxInQueue } from "./utils";
 
 export class SJF implements Scheduler {
     private initialProcesses: Process[] = [];
     private processes: Process[] = [];
-    private queue: ProcessShard[] = [];
+    private queue: ProcessShardQueue = new ProcessShardQueue();
     private getTime: () => number = () => 0;
     private preemptive: boolean = false;
 
@@ -20,6 +19,7 @@ export class SJF implements Scheduler {
             shard_time: process.execution_time,
             completing: true,
             execution_start_time: 0,
+            remaining_time: 0,
         };
     };
     // recalculate execution_start_time
@@ -48,7 +48,9 @@ export class SJF implements Scheduler {
     public setInitialProcesses = (processes: Process[]) => {
         this.initialProcesses = [...processes];
         this.processes = [...processes];
-        this.queue = processes.sort((a, b) => a.execution_time - b.execution_time).map((p) => this.createFullShard(p));
+        this.queue = new ProcessShardQueue(
+            ...processes.sort((a, b) => a.execution_time - b.execution_time).map((p) => this.createFullShard(p))
+        );
         this.refreshShards(0);
     };
 
@@ -77,7 +79,7 @@ export class SJF implements Scheduler {
 
     public addProcess = (process: Process) => {
         let now = this.getTime();
-        let currentProcessShardIdx = findShardIdxInQueue(this.queue, now);
+        let currentProcessShardIdx = this.queue.findShardIndex(now);
 
         if (currentProcessShardIdx === -1) {
             console.log("no current process found " + now);
@@ -96,17 +98,17 @@ export class SJF implements Scheduler {
                 // split shards
                 shard.completing = false;
                 shard.shard_time = now - shard.execution_start_time;
+                shard.remaining_time = remainingTime;
 
                 let secondShard: ProcessShard = {
                     completing: true,
                     execution_start_time: shard.execution_start_time + shard.shard_time,
                     process: shard.process,
                     shard_time: remainingTime,
+                    remaining_time: 0,
                 };
                 this.queue.splice(currentProcessShardIdx + 1, 0, secondShard);
-
-            }
-            if(now === shard.execution_start_time) {
+            } else if (now == shard.execution_start_time) {
                 currentProcessShardIdx--;
             }
         }
@@ -124,7 +126,7 @@ export class SJF implements Scheduler {
         return this.queue;
     };
     public getCurrentProcessShard = () => {
-        let currentProcessIdx = findShardIdxInQueue(this.queue, this.getTime());
+        let currentProcessIdx = this.queue.findShardIndex(this.getTime());
         if (currentProcessIdx === -1) {
             return null;
         }
@@ -132,7 +134,7 @@ export class SJF implements Scheduler {
     };
 
     public getQueueSinceNow = (): ProcessShard[] => {
-        let currentProcessIdx = findShardIdxInQueue(this.queue, this.getTime());
+        let currentProcessIdx = this.queue.findShardIndex(this.getTime());
         if (currentProcessIdx === -1) {
             return [];
         }
@@ -145,27 +147,16 @@ export class SJF implements Scheduler {
         if (queueNow.length === 0) {
             return 0;
         }
-        let calculatedPids: Set<number> = new Set();
-        let previousCompletionTime = 0;
-        let totalWaitTime = queueNow
-            .map((shard) => {
-                let completionTime = previousCompletionTime + shard.shard_time;
-                let waitingTime = 0;
 
-                if (!calculatedPids.has(shard.process.pid)) {
-                    waitingTime = completionTime - shard.process.arrival_time - shard.process.execution_time;
-                } else {
-                    calculatedPids.add(shard.process.pid);
-                }
-
-                previousCompletionTime = completionTime;
-                return {
-                    completionTime,
-                    waitingTime,
-                };
-            })
-            .reduce((acc, val) => acc + val.waitingTime, 0);
-        return totalWaitTime / calculatedPids.size;
+        let groupedProcesses = queueNow.reduce(
+            (entryMap, s) => entryMap.set(s.process.pid, [...(entryMap.get(s.process.pid) || []), s]),
+            new Map<number, ProcessShard[]>()
+        );
+        let totalWaitTime = 0;
+        for (let [pid, shards] of groupedProcesses) {
+            totalWaitTime += this.calculateProcessWaitingTime(queueNow[0].execution_start_time, shards);
+        }
+        return totalWaitTime / groupedProcesses.size;
     };
 
     public getWaitingTime = (pid: number): number => {
@@ -174,11 +165,23 @@ export class SJF implements Scheduler {
         if (queueNow.length === 0) {
             return 0;
         }
-        let shardIdx = queueNow.findIndex((shard) => shard.process.pid === pid);
-        if (shardIdx === -1) {
+        let shards = queueNow.filter((shard) => shard.process.pid === pid);
+
+        if (shards.length === 0) {
             return 0;
         }
-        let shard = queueNow[shardIdx];
-        return shard.execution_start_time - shard.process.arrival_time;
+        return this.calculateProcessWaitingTime(queueNow[0].execution_start_time, shards);
     };
+
+    private calculateProcessWaitingTime = (startTime: number, processShards: ProcessShard[]): number => {
+        let waitTime = 0;
+        let waitSince = Math.max(startTime, processShards[0].process.arrival_time);
+        processShards.forEach((shard) => {
+            waitTime += shard.execution_start_time - waitSince;
+            waitSince = shard.execution_start_time + shard.shard_time;
+        });
+        return waitTime;
+    };
+
+    public getName = () => `SJF${this.preemptive ? " (z wywłaszczaniem)" : ""}`;
 }
