@@ -63,33 +63,20 @@ export class FCFS implements Scheduler {
 
     public reset = () => this.setInitialProcesses(this.initialProcesses);
 
-    public getAverageWaitingTime = () => {
+    public getWaitingTimes = (): Map<number, number> => {
         let queueNow = this.getQueueSinceNow();
         if (queueNow.length === 0) {
-            return 0;
+            return new Map<number, number>();
         }
         let now = this.getTime();
-        let totalWaitTime = queueNow
-            .map(
-                (shard) =>
-                    shard.execution_start_time - Math.max(queueNow[0].execution_start_time, shard.process.arrival_time)
-            )
-            .reduce((acc, val) => acc + val, 0);
-        return totalWaitTime / queueNow.length;
-    };
-
-    public getWaitingTime = (pid: number): number => {
-        let queueNow = this.getQueueSinceNow();
-
-        if (queueNow.length === 0) {
-            return 0;
-        }
-        let shardIdx = queueNow.findIndex((shard) => shard.process.pid === pid);
-        if (shardIdx === -1) {
-            return 0;
-        }
-        let shard = queueNow[shardIdx];
-        return shard.execution_start_time - Math.max(queueNow[0].execution_start_time, shard.process.arrival_time);
+        return queueNow.reduce(
+            (entryMap, s) =>
+                entryMap.set(
+                    s.process.pid,
+                    s.execution_start_time - Math.max(queueNow[0].execution_start_time, s.process.arrival_time)
+                ),
+            new Map()
+        );
     };
 
     public getName = () => "FCFS";

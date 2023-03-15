@@ -15,20 +15,36 @@ import { TimelineTrack } from "./TimelineTrack";
 export interface SchedulerData {
     scheduler: Scheduler;
     currentQueue: ProcessShard[];
+    waitingTimes: Map<number, number>;
 }
+
+const createSchedulerData = (
+    scheduler: Scheduler,
+    currentQueue?: ProcessShard[],
+    waitingTimes?: Map<number, number>
+) => ({
+    scheduler,
+    currentQueue: currentQueue ?? [],
+    waitingTimes: waitingTimes ?? new Map<number, number>(),
+});
 
 export const Timeline = () => {
     const [schedulers, setScheduelers] = React.useState<SchedulerData[]>([
-        { currentQueue: [], scheduler: new FCFS() },
-        { currentQueue: [], scheduler: new SJF({ preemptive: false }) },
-        { currentQueue: [], scheduler: new SJF({ preemptive: true }) },
-        { currentQueue: [], scheduler: new RR() },
+        createSchedulerData(new FCFS()),
+        createSchedulerData(new SJF({ preemptive: false })),
+        createSchedulerData(new SJF({ preemptive: true })),
+        createSchedulerData(new RR()),
     ]);
 
     const generator = React.useMemo(() => new TickGenerator(), []);
 
     const [time, setTime] = React.useState(generator.time);
     const [isRunning, setIsRunning] = React.useState(false);
+
+    const updateTime = (time: number) => {
+        setTime(time);
+        refreshSchedulers();
+    };
 
     const startGenerator = () => {
         generator.start();
@@ -40,6 +56,7 @@ export const Timeline = () => {
             schedulers.map((s) => ({
                 scheduler: s.scheduler,
                 currentQueue: s.scheduler.getProcessShards(),
+                waitingTimes: s.scheduler.getWaitingTimes(),
             }))
         );
     };
@@ -52,7 +69,7 @@ export const Timeline = () => {
             if (!generator.isRunning()) {
                 setIsRunning(false);
             }
-            setTime(generator.time);
+            updateTime(generator.time);
         });
         schedulers.forEach((s) => s.scheduler.setTimeSource(() => generator.time));
     }, []);
@@ -89,7 +106,7 @@ export const Timeline = () => {
                 <TimelineStatus schedulers={schedulers} />
                 <div className="timelines">
                     {schedulers.map((s, idx) => (
-                        <TimelineTrack scheduler={s.scheduler} key={idx} />
+                        <TimelineTrack scheduler={s} key={idx} />
                     ))}
                     <TimelinePlayhead
                         time={time}
@@ -97,7 +114,7 @@ export const Timeline = () => {
                         totalTime={getTotalExecutionTime()}
                         setTime={(time) => {
                             generator.setTime(time);
-                            setTime(time);
+                            updateTime(time);
                         }}
                     />
                 </div>

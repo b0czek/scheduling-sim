@@ -100,7 +100,7 @@ export class SJF implements Scheduler {
                     remaining_time: 0,
                 };
                 this.queue.splice(currentProcessShardIdx + 1, 0, secondShard);
-            } else if (now == shard.execution_start_time) {
+            } else if (now === shard.execution_start_time) {
                 currentProcessShardIdx--;
             }
         }
@@ -134,35 +134,21 @@ export class SJF implements Scheduler {
         return this.queue.slice(currentProcessIdx);
     };
 
-    public getAverageWaitingTime = (): number => {
+    public getWaitingTimes = (): Map<number, number> => {
         let queueNow = this.getQueueSinceNow();
         if (queueNow.length === 0) {
-            return 0;
+            return new Map<number, number>();
         }
 
         let groupedProcesses = queueNow.reduce(
             (entryMap, s) => entryMap.set(s.process.pid, [...(entryMap.get(s.process.pid) || []), s]),
             new Map<number, ProcessShard[]>()
         );
-        let totalWaitTime = 0;
+        let waitingTimes = new Map<number, number>();
         for (let [pid, shards] of groupedProcesses) {
-            totalWaitTime += this.calculateProcessWaitingTime(queueNow[0].execution_start_time, shards);
+            waitingTimes.set(pid, this.calculateProcessWaitingTime(queueNow[0].execution_start_time, shards));
         }
-        return totalWaitTime / groupedProcesses.size;
-    };
-
-    public getWaitingTime = (pid: number): number => {
-        let queueNow = this.getQueueSinceNow();
-
-        if (queueNow.length === 0) {
-            return 0;
-        }
-        let shards = queueNow.filter((shard) => shard.process.pid === pid);
-
-        if (shards.length === 0) {
-            return 0;
-        }
-        return this.calculateProcessWaitingTime(queueNow[0].execution_start_time, shards);
+        return waitingTimes;
     };
 
     private calculateProcessWaitingTime = (startTime: number, processShards: ProcessShard[]): number => {
