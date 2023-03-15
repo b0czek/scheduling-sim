@@ -37,14 +37,6 @@ export class SJF implements Scheduler {
         }
     };
 
-    private getTotalExecutionTime = (): number => {
-        if (this.queue.length === 0) {
-            return 0;
-        }
-        let lastProcess = this.queue.at(-1)!;
-        return lastProcess.execution_start_time + lastProcess.shard_time;
-    };
-
     public setInitialProcesses = (processes: Process[]) => {
         this.initialProcesses = [...processes];
         this.processes = [...processes];
@@ -183,5 +175,5 @@ export class SJF implements Scheduler {
         return waitTime;
     };
 
-    public getName = () => `SJF${this.preemptive ? " (z wywłaszczaniem)" : ""}`;
+    public getName = () => `SJF${this.preemptive ? "-w" : ""}`;
 }

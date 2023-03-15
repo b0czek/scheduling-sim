@@ -59,6 +59,9 @@ export class RR implements Scheduler {
 
     private calculateBatches = (sinceTime: number) => {
         let batchIdx = Math.max(this.batches.findBatchIndex(sinceTime), 0);
+        if (this.batches[batchIdx]) {
+            sinceTime = this.batches[batchIdx].queueStartTime;
+        }
         this.batches = new RoundRobinBatches(...this.batches.slice(0, batchIdx));
 
         let p = this.processes.filter(
@@ -138,12 +141,66 @@ export class RR implements Scheduler {
         this.calculateBatches(0);
     };
 
+    private getBatchesSinceNow = (): RoundRobinBatches => {
+        let batchIdx = Math.max(this.batches.findBatchIndex(this.getTime()), 0);
+        return new RoundRobinBatches(...this.batches.slice(batchIdx, this.batches.length));
+    };
+    private calculateProcessWaitingTime = (startTime: number, processShards: ProcessShard[]): number => {
+        if (processShards.length === 0) {
+            return 0;
+        }
+        let waitTime = 0;
+        let waitSince = Math.max(startTime, processShards[0].process.arrival_time);
+        processShards.forEach((shard) => {
+            waitTime += shard.execution_start_time - waitSince;
+            waitSince = shard.execution_start_time + shard.shard_time;
+        });
+        return waitTime;
+    };
+
     public getAverageWaitingTime = () => {
-        return 0;
+        let batches = this.getBatchesSinceNow();
+        if (batches.length === 0) {
+            return 0;
+        }
+        let currentProcessIdx = batches[0].findShardIndex(this.getTime());
+        if (currentProcessIdx === -1) {
+            return 0;
+        }
+        let groupedProcesses = batches
+            .flat()
+            .filter((shard) => shard.execution_start_time + shard.shard_time >= this.getTime())
+            .reduce(
+                (entryMap, s) => entryMap.set(s.process.pid, [...(entryMap.get(s.process.pid) || []), s]),
+                new Map<number, ProcessShard[]>()
+            );
+
+        let totalWaitTime = 0;
+        for (let [pid, shards] of groupedProcesses) {
+            totalWaitTime += this.calculateProcessWaitingTime(
+                batches[0][currentProcessIdx].execution_start_time,
+                shards
+            );
+        }
+
+        return totalWaitTime / groupedProcesses.size;
     };
     public getWaitingTime = (pid: number) => {
-        // let firstBatch = this.batches.findBatchIndex();
-        return 0;
+        let batches = this.getBatchesSinceNow();
+        if (batches.length === 0) {
+            return 0;
+        }
+        let currentProcessIdx = batches[0].findShardIndex(this.getTime());
+        if (currentProcessIdx === -1) {
+            return 0;
+        }
+
+        let shards = batches
+            .flat()
+            .filter(
+                (shard) => shard.process.pid === pid && shard.execution_start_time + shard.shard_time >= this.getTime()
+            );
+        return this.calculateProcessWaitingTime(batches[0][currentProcessIdx].execution_start_time, shards);
     };
     public getName = () => "RoundRobin";
 }

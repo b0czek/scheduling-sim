@@ -7,7 +7,6 @@ import { FCFS } from "../lib/schedulers/FCFS";
 import { RR } from "../lib/schedulers/RR";
 import { SJF } from "../lib/schedulers/SJF";
 import { TickGenerator } from "../lib/TickGenerator";
-import { TimelineChanges } from "./TimelineChanges";
 import { TimelineControls } from "./TimelineControls";
 import { TimelinePlayhead } from "./TimelinePlayhead";
 import { TimelineStatus } from "./TimelineStatus";
