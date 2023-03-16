@@ -25,6 +25,7 @@
     height: 100%;
 }
 .timeline-statuses {
+    overflow: none;
     display: flex;
     flex-direction: column;
 }
@@ -76,7 +77,7 @@
     height: 92%;
     box-sizing: border-box;
     background: inherit;
-    z-index: 100;
+    z-index: 99;
 }
 
 input[type="range"]::-moz-range-track {
@@ -146,4 +147,27 @@ input[type="range"]::-webkit-slider-thumb {
     100% {
         padding-left: 50px;
     }
+}
+
+.timeline-changes {
+    display: flex;
+    flex-grow: 0;
+    flex-shrink: 0;
+    flex-direction: row;
+    height: 30px;
+    width: 100%;
+    z-index: 100;
+}
+.timeline-change {
+    display: flex;
+    flex-direction: row;
+}
+
+.timeline-change-tick {
+    height: 100%;
+    width: 6px;
+    min-width: 6px;
+    background-color: rgb(0, 155, 0);
+    border-top-left-radius: 2px;
+    border-top-right-radius: 2px;
 }

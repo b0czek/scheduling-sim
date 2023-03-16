@@ -7,6 +7,7 @@ import { FCFS } from "../lib/schedulers/FCFS";
 import { RR } from "../lib/schedulers/RR";
 import { SJF } from "../lib/schedulers/SJF";
 import { TickGenerator } from "../lib/TickGenerator";
+import { TimelineChanges } from "./TimelineChanges";
 import { TimelineControls } from "./TimelineControls";
 import { TimelinePlayhead } from "./TimelinePlayhead";
 import { TimelineStatus } from "./TimelineStatus";
@@ -77,7 +78,9 @@ export const Timeline = () => {
     return (
         <div className="container">
             <div>
-                czas: {time}/{getTotalExecutionTime()}
+                <h2>
+                    czas: {time}/{getTotalExecutionTime()}
+                </h2>
             </div>
             <TimelineControls
                 onPause={() => generator.stop()}
@@ -94,20 +97,15 @@ export const Timeline = () => {
                     refreshSchedulers();
                 }}
                 onQuantumTimeSet={(time) => {
-                    for (const s of schedulers) {
-                        if (s.scheduler.setTimeQuantum) {
-                            s.scheduler.setTimeQuantum(time);
-                        }
-                    }
+                    schedulers
+                        .filter((s) => s.scheduler.setTimeQuantum)
+                        .forEach((s) => s.scheduler.setTimeQuantum!(time));
                     refreshSchedulers();
                 }}
             />
             <div className="timelines-row">
                 <TimelineStatus schedulers={schedulers} />
                 <div className="timelines">
-                    {schedulers.map((s, idx) => (
-                        <TimelineTrack scheduler={s} key={idx} />
-                    ))}
                     <TimelinePlayhead
                         time={time}
                         isRunning={isRunning}
@@ -117,6 +115,10 @@ export const Timeline = () => {
                             updateTime(time);
                         }}
                     />
+                    {schedulers.map((s, idx) => (
+                        <TimelineTrack scheduler={s} key={idx} />
+                    ))}
+                    <TimelineChanges processes={getGeneratedProcesses()} />
                 </div>
             </div>
         </div>

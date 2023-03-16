@@ -1,4 +1,3 @@
-import { time } from "console";
 import { Process } from "../Process";
 import { ProcessShard, ProcessShardQueue } from "../ProcessShard";
 import { Scheduler } from "../Scheduler";
@@ -45,7 +44,6 @@ export class RR implements Scheduler {
     private initialProcesses: Process[] = [];
     private processes: Process[] = [];
     private batches: RoundRobinBatches = new RoundRobinBatches();
-
     private timeQuantum: number = 1;
 
     private getTime: () => number = () => 0;
@@ -86,8 +84,8 @@ export class RR implements Scheduler {
                 let remainingTime =
                     this.findShardInPreviousBatch(batchIdx, process)?.remaining_time ?? process.execution_time;
                 let shard_time = Math.min(remainingTime, this.timeQuantum);
-                // let shard_time = p.length === 1 ? remainingTime : Math.min(remainingTime, this.timeQuantum);
                 let completing = remainingTime - shard_time === 0;
+
                 queue.push({
                     shard_time,
                     completing,

@@ -68,7 +68,6 @@ export class FCFS implements Scheduler {
         if (queueNow.length === 0) {
             return new Map<number, number>();
         }
-        let now = this.getTime();
         return queueNow.reduce(
             (entryMap, s) =>
                 entryMap.set(
